@@ -7,10 +7,12 @@ import (
 	"os"
 	"os/signal"
 	"port-service/internal/config"
+	"port-service/internal/repository/inmem"
 	"port-service/internal/services"
 	"port-service/internal/transport"
 	"syscall"
 	"time"
+
 	"github.com/gorilla/mux"
 )
 
@@ -25,14 +27,16 @@ func main() {
 func run() error  {
 	cfg := config.Read()
 
-	// create port service
-	portService := services.NewPortService()
+	portStoreRepo := inmem.NewPortStore()
+	portService := services.NewPortService(portStoreRepo)
 
 	// create http server with application injected
 	httpServer := transport.NewHttpServer(portService)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/port", httpServer.GetPort).Methods("GET")
+	router.HandleFunc("/ports", httpServer.GetPort).Methods("GET")
+	router.HandleFunc("/count", httpServer.CountPorts).Methods("GET")
+	router.HandleFunc("/ports", httpServer.UploadPorts).Methods("POST")
 
 	srv := &http.Server{
 		Addr:    cfg.HTTPAddr,
